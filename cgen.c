@@ -138,10 +138,12 @@ static void genExp( TreeNode * tree)
          /* gen code for ac = right operand */
          cGen(p2);
          /* now load left operand */
-         //if (tmpOffset<=4){
-            //emitRM("LD",ac1,++tmpOffset,mp,"op: load left");
-        // }
-         //else emitRM("ST",ac,tmpOffset--,mp,"op: push left");
+         /*
+         if (tmpOffset<=4){
+            emitRM("LD",ac1,++tmpOffset,mp,"op: load left");
+         }
+         else emitRM("ST",ac,tmpOffset--,mp,"op: push left");
+         */
          switch (tree->attr.op) {
             case PLUS :
                emitRO("ADD",ac,ac1,ac,"op +");
