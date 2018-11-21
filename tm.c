@@ -234,8 +234,8 @@ int readInstructions (void)
     iMem[loc].iarg3 = 0 ;
   }
   lineNo = 0 ;
-  while (! feof(pgm)){ 
-    fgets( in_Line, LINESIZE-2, pgm  ) ;
+  while (! feof(pgm))
+  { fgets( in_Line, LINESIZE-2, pgm  ) ;
     inCol = 0 ; 
     lineNo++;
     lineLen = strlen(in_Line)-1 ;
@@ -304,12 +304,11 @@ int readInstructions (void)
 
 
 /********************************************/
-STEPRESULT stepTM (void){ 
- 
-  INSTRUCTION currentinstruction;
-  int pc;
-  int r,s,t,m;
-  int ok;
+STEPRESULT stepTM (void)
+{ INSTRUCTION currentinstruction  ;
+  int pc  ;
+  int r,s,t,m  ;
+  int ok ;
 
   pc = reg[PC_REG] ;
   if ( (pc < 0) || (pc > IADDR_SIZE)  )
@@ -398,9 +397,8 @@ STEPRESULT stepTM (void){
 } /* stepTM */
 
 /********************************************/
-int doCommand (void){
-
-  char cmd;
+int doCommand (void)
+{ char cmd;
   int stepcnt=0, i;
   int printcnt;
   int stepResult;
@@ -519,7 +517,6 @@ int doCommand (void){
       stepcnt = 0;
       for (regNo = 0;  regNo < NO_REGS ; regNo++)
             reg[regNo] = 0 ;
-
       dMem[0] = DADDR_SIZE - 1 ;
       for (loc = 1 ; loc < DADDR_SIZE ; loc++)
             dMem[loc] = 0 ;
@@ -560,10 +557,9 @@ int doCommand (void){
 /* E X E C U T I O N   B E G I N S   H E R E */
 /********************************************/
 
-int main( int argc, char * argv[]){
-
-  if (argc != 2){
-    printf("usage: %s <filename>\n",argv[0]);
+main( int argc, char * argv[] )
+{ if (argc != 2)
+  { printf("usage: %s <filename>\n",argv[0]);
     exit(1);
   }
   strcpy(pgmName,argv[1]) ;

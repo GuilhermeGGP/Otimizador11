@@ -49,6 +49,8 @@ typedef struct BucketListRec
    { char * name;
      LineList lines;
      int memloc ; /* memory location for variable */
+     int tipoEnumerado;
+     int peso;
      struct BucketListRec * next;
    } * BucketList;
 
@@ -72,10 +74,13 @@ void st_insert( char * name, int lineno, int loc )
     l->lines->lineno = lineno;
     l->memloc = loc;
     l->lines->next = NULL;
+    l->tipoEnumerado = 0;
+    l->peso = 1;
     l->next = hashTable[h];
     hashTable[h] = l; }
   else /* found in table, so just add line number */
   { LineList t = l->lines;
+    l->peso++;
     while (t->next != NULL) t = t->next;
     t->next = (LineList) malloc(sizeof(struct LineListRec));
     t->next->lineno = lineno;
@@ -101,8 +106,8 @@ int st_lookup ( char * name )
  */
 void printSymTab(FILE * listing)
 { int i;
-  fprintf(listing,"Variable Name  Location   Line Numbers\n");
-  fprintf(listing,"-------------  --------   ------------\n");
+  fprintf(listing,"Variable Name  Location tipoEnumerado Peso         Line Numbers\n");
+  fprintf(listing,"-------------  -------- ------------- ----         ------------\n");
   for (i=0;i<SIZE;++i)
   { if (hashTable[i] != NULL)
     { BucketList l = hashTable[i];
@@ -110,8 +115,10 @@ void printSymTab(FILE * listing)
       { LineList t = l->lines;
         fprintf(listing,"%-14s ",l->name);
         fprintf(listing,"%-8d  ",l->memloc);
+        fprintf(listing,"%-13d  ",l->tipoEnumerado);
+        fprintf(listing,"%-4d  ",l->peso);
         while (t != NULL)
-        { fprintf(listing,"%4d ",t->lineno);
+        { fprintf(listing,"%12d ",t->lineno);
           t = t->next;
         }
         fprintf(listing,"\n");

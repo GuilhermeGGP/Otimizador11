@@ -18,13 +18,17 @@
 */
 static int tmpOffset = 0;
 
+//static void saveTmp(void);
+//static void loadTmp(void);
+
 /* prototype for internal recursive code generator */
 static void cGen (TreeNode * tree);
 
 /* Procedure genStmt generates code at a statement node */
-static void genStmt( TreeNode * tree)
-{ TreeNode * p1, * p2, * p3;
-  int savedLoc1,savedLoc2,currentLoc;
+static void genStmt( TreeNode *tree){
+ 
+  TreeNode *p1, *p2, *p3;
+  int savedLoc1, savedLoc2, currentLoc;
   int loc;
   switch (tree->kind.stmt) {
 
@@ -74,22 +78,17 @@ static void genStmt( TreeNode * tree)
          cGen(tree->child[0]);
          /* now store value */
          loc = st_lookup(tree->attr.name);
-         if (tmpOffset>4)
-            emitRM("ST",ac,loc,gp,"assign: store value");
+         emitRM("ST",ac,loc,gp,"assign: store value");
+         if(tmpOffset < 0)
+          ++tmpOffset;
+
          if (TraceCode)  emitComment("<- assign") ;
          break; /* assign_k */
 
       case ReadK:
-         if(tmpOffset>4){
-            emitRM("ST",tmpOffset,loc,gp,"read: store value");
-            emitRO("IN",tmpOffset,0,0,"read integer value");
-            loc = st_lookup(tree->attr.name);
-         }
-         else {
-            emitRO("IN",tmpOffset,0,0,"read integer value");
-            loc = st_lookup(tree->attr.name);
-            tmpOffset++;
-         }
+         emitRO("IN",ac,0,0,"read integer value");
+         loc = st_lookup(tree->attr.name);
+         emitRM("ST",ac,loc,gp,"read: store value");
          break;
       case WriteK:
          /* generate code for expression to write */
@@ -103,66 +102,81 @@ static void genStmt( TreeNode * tree)
 } /* genStmt */
 
 /* Procedure genExp generates code at an expression node */
-static void genExp( TreeNode * tree)
-{ int loc;
-  TreeNode * p1, * p2;
+static void genExp( TreeNode * tree){ 
+  
+  int loc;
+  TreeNode *p1, *p2;
+  
   switch (tree->kind.exp) {
 
     case ConstK :
       if (TraceCode) emitComment("-> Const") ;
+
+/***************************** Alteração *************************************/
       /* gen code to load integer constant using LDC */
-      if (tmpOffset<=4){
-         emitRM("LDC",tmpOffset,tree->attr.val,0,"load const");
-         tmpOffset++;
+      if(tmpOffset < 0){
+        emitRM("LDC",ac1,tree->attr.val,0,"load const"); 
+        ++tmpOffset;
+      }else{
+        emitRM("LDC",ac,tree->attr.val,0,"load const"); 
+        tmpOffset--;
       }
+/***************************** FIM *******************************************/
       if (TraceCode)  emitComment("<- Const") ;
       break; /* ConstK */
     
     case IdK :
       if (TraceCode) emitComment("-> Id") ;
       loc = st_lookup(tree->attr.name);
-      if (tmpOffset<=4){
-         emitRM("LD",tmpOffset,loc,gp,"load id value");
-         tmpOffset++;
+/***************************** Alteração *************************************/
+      if(tmpOffset < 0){
+        emitRM("LD",ac1,loc,gp,"load id value");
+        ++tmpOffset;
       }
-      if (TraceCode)  emitComment("<- Id") ;
+      else{
+        emitRM("LD",ac,loc,gp,"load id value");
+        --tmpOffset;
+      }
+/***************************** FIM *******************************************/
+      if(TraceCode)
+        emitComment("<- Id") ;
       break; /* IdK */
 
     case OpK :
-         if (TraceCode) emitComment("-> Op") ;
-         p1 = tree->child[0];
-         p2 = tree->child[1];
-         /* gen code for ac = left arg */
-         cGen(p1);
-         /* gen code to push left operand */
-         /* gen code for ac = right operand */
-         cGen(p2);
-         /* now load left operand */
-         /*
-         if (tmpOffset<=4){
-            emitRM("LD",ac1,++tmpOffset,mp,"op: load left");
-         }
-         else emitRM("ST",ac,tmpOffset--,mp,"op: push left");
-         */
-         switch (tree->attr.op) {
+        if (TraceCode) emitComment("-> Op") ;
+        p1 = tree->child[0];
+        p2 = tree->child[1];
+
+        /* gen code for ac = left arg */
+        cGen(p1);
+
+        /* gen code to push left operand */
+        /*if(tmpOffset < -4)
+          /*emitRM("ST",ac,tmpOffset--,mp,"op: push left");    /*dMem[tmpOffset+reg[mp]]  <-- ac*/
+      
+        /* gen code for ac = right operand */
+        cGen(p2);
+
+        /* now load left operand */ 
+        /*if(tmpOffset > -4)
+          /*emitRM("LD",ac1,++tmpOffset,mp,"op: load left");   /*ac1 <- dMem[tmpOffset+reg[mp]]*/
+        
+        switch (tree->attr.op){
             case PLUS :
-               emitRO("ADD",ac,ac1,ac,"op +");
+               emitRO("ADD",ac,ac,ac1,"op +");
                break;
             case MINUS :
-               emitRO("SUB",ac,ac1,ac,"op -");
+               emitRO("SUB",ac,ac,ac1,"op -");
                break;
             case TIMES :
-               emitRO("MUL",ac,ac1,ac,"op *");
+               emitRO("MUL",ac,ac,ac1,"op *");
                break;
             case OVER :
-               emitRO("DIV",ac,ac1,ac,"op /");
+               emitRO("DIV",ac,ac,ac1,"op /");
                break;
             case LT :
-               emitRO("SUB",ac,ac1,ac,"op <") ;
-               emitRM("JLT",ac,2,pc,"br if true") ;
-               emitRM("LDC",ac,0,ac,"false case") ;
-               emitRM("LDA",pc,1,pc,"unconditional jmp") ;
-               emitRM("LDC",ac,1,ac,"true case") ;
+               emitRO("SUB",ac,ac,ac1,"op <") ;
+               emitRM("JGE",ac,2,pc,"JGE");
                break;
             case EQ :
                emitRO("SUB",ac,ac1,ac,"op ==") ;
@@ -186,15 +200,20 @@ static void genExp( TreeNode * tree)
 /* Procedure cGen recursively generates code by
  * tree traversal
  */
-static void cGen( TreeNode * tree)
-{ if (tree != NULL)
-  { switch (tree->nodekind) {
+static void cGen( TreeNode * tree){
+
+  if (tree != NULL){
+    switch (tree->nodekind) {
       case StmtK:
+        /*printf("chamando genStmt\n");*/
         genStmt(tree);
         break;
+
       case ExpK:
+        /*printf("chamando genExp\n");*/
         genExp(tree);
         break;
+
       default:
         break;
     }
@@ -211,16 +230,17 @@ static void cGen( TreeNode * tree)
  * of the code file, and is used to print the
  * file name as a comment in the code file
  */
-void codeGen(TreeNode * syntaxTree, char * codefile)
-{  char * s = malloc(strlen(codefile)+7);
+void codeGen(TreeNode * syntaxTree, char * codefile){
+ 
+   char * s = malloc(strlen(codefile)+7);
    strcpy(s,"File: ");
    strcat(s,codefile);
    emitComment("TINY Compilation to TM Code");
    emitComment(s);
    /* generate standard prelude */
    emitComment("Standard prelude:");
-   emitRM("LD",mp,0,ac,"load maxaddress from location 0");
-   emitRM("ST",ac,0,ac,"clear location 0");
+   emitRM("LD",mp,0,ac,"load maxaddress from location 0");    /*mp <- dMem[0+reg[ac]]*/
+   emitRM("ST",ac,0,ac,"clear location 0");                   /*ac <- dMem[0+reg[ac]]*/
    emitComment("End of standard prelude.");
    /* generate code for TINY program */
    cGen(syntaxTree);
@@ -228,3 +248,13 @@ void codeGen(TreeNode * syntaxTree, char * codefile)
    emitComment("End of execution.");
    emitRO("HALT",0,0,0,"");
 }
+
+/*
+$0 --> ac
+$1 --> ac1
+$6 --> mp
+$5 --> gp
+
+tmpOffset de reg[0-4];
+
+*/
